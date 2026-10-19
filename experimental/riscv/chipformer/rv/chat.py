@@ -29,9 +29,9 @@ from chipformer.rv import spec as S
 CALC_TOOL = {"type": "function", "function": {
     "name": "calc",
     "description": "Evaluate an arithmetic expression exactly, with numbers of up to 62 digits: "
-                   "+ - * and parentheses on integers or decimals; on integers also / (exact: "
-                   "an integer or a reduced fraction p/q), // (floor division), % , ** and "
-                   "gcd(a,b). Returns the exact value.",
+                   "+ - * / and parentheses on integers and fractions (exact: the result is an "
+                   "integer or a reduced fraction p/q), + - * on decimals, and on integers also "
+                   "// (floor division), %, ** and gcd(a,b). Returns the exact value.",
     "parameters": {"type": "object", "properties": {
         "expression": {"type": "string",
                        "description": "e.g. 123456789*987654321-42 or 1.25*-3.5 or 84/18"}},
@@ -374,7 +374,11 @@ class RvChat:
                     break
                 else:
                     k = len(lock.toks)
-                    lock.qwen([nxt])
+                    try:
+                        lock.qwen([nxt])
+                    except RuntimeError as e:  # the reference run did not halt
+                        lock_error = {"at": len(gen) - 1, "got": str(e), "want": "a halt"}
+                        break
                     expect = list(lock.toks[k + 1:])
             if nxt in self.eos:
                 break

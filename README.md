@@ -179,7 +179,8 @@ itself, digit by digit. You can run it with no runtime or tool executor at all.
 |---|---|---|---|
 | Synthetic integer arithmetic | 70.0 | **97.5** | 97.5 |
 | DeepMind `mul_big` | 65.0 | **97.5** | 100 |
-| DeepMind `div_big` | 80.0 | **95.0** | 97.5 |
+| DeepMind `div_big` | 80.0 | **97.5** | 95.0 |
+| DeepMind `mul_div_multiple_longer` | 77.5 | **100.0** | 97.5 |
 | DeepMind `add_or_sub_big` | 95.0 | **97.5** | 97.5 |
 
 The computer has never printed a wrong result. We replayed about 230,000 of its output positions
