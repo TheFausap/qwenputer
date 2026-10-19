@@ -24,16 +24,16 @@ other Qwen checkpoint.
 ## Benchmarks
 
 These are Qwen3.5-4B scores, greedy decoding. Each row compares base Qwen and Qwenputer on the
-same problems, with a paired McNemar test. The Python-tool column is base Qwen calling a real
+same problems. The Python-tool column is base Qwen calling a real
 Python interpreter on the host, which is the ceiling for this kind of help.
 
-| Benchmark | Base Qwen3.5-4B | **Qwenputer** | McNemar p | Python tool (host) |
-|---|---|---|---|---|
-| NUPA integer add / sub / mul, 3-20 digits (576) | 48.6 | **100.0** | <1e-80 | 100.0 |
-| DeepMind arithmetic, 6 sets pooled (600) | 80.8 | **92.3** | 2e-11 | 94.2 |
-| DeepMind `div_big` (100) | 77 | **97** | 4e-5 | 85 |
-| DeepMind `mul_big` (100) | 66 | **93** | 4e-6 | 91 |
-| DeepMind clean big add / mul (200) | 69.5 | **99.0** | 4e-16 | 98.5 |
+| Benchmark | Base Qwen3.5-4B | **Qwenputer** | Python tool (host) |
+|---|---|---|---|
+| NUPA integer add / sub / mul, 3-20 digits (576) | 48.6 | **100.0** | 100.0 |
+| DeepMind arithmetic, 6 sets pooled (600) | 80.8 | **92.3** | 94.2 |
+| DeepMind `div_big` (100) | 77 | **97** | 85 |
+| DeepMind `mul_big` (100) | 66 | **93** | 91 |
+| DeepMind clean big add / mul (200) | 69.5 | **99.0** | 98.5 |
 
 The computer has never printed a wrong result. We replayed about 3.9 million positions of model
 output through a reference simulator of the circuit and found zero mismatches. MMLU: 71.9 vs 71.7 for base (99% identical answers, KL 7e-4).
@@ -175,12 +175,12 @@ tool and Qwen calls it like any other tool, but nothing outside the model runs i
 layers read the call and run it on the RISC-V CPU, and the model writes the `<tool_response>`
 itself, digit by digit. You can run it with no runtime or tool executor at all.
 
-| Benchmark | Base Qwen3.5-4B | **Qwenputer** | McNemar p | Python tool (host) |
-|---|---|---|---|---|
-| Synthetic integer arithmetic | 70.0 | **97.5** | 0.003 | 97.5 |
-| DeepMind `mul_big` | 65.0 | **97.5** | 0.001 | 100 |
-| DeepMind `div_big` | 80.0 | **95.0** | 0.03 | 97.5 |
-| DeepMind `add_or_sub_big` | 95.0 | **97.5** | 1.0 | 97.5 |
+| Benchmark | Base Qwen3.5-4B | **Qwenputer** | Python tool (host) |
+|---|---|---|---|
+| Synthetic integer arithmetic | 70.0 | **97.5** | 97.5 |
+| DeepMind `mul_big` | 65.0 | **97.5** | 100 |
+| DeepMind `div_big` | 80.0 | **95.0** | 97.5 |
+| DeepMind `add_or_sub_big` | 95.0 | **97.5** | 97.5 |
 
 The computer has never printed a wrong result. We replayed about 230,000 of its output positions
 through a reference model of the machine and found zero mismatches. Qwen's text behaviour matches
