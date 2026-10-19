@@ -167,8 +167,9 @@ details:
 compiles a 32-bit **RV32IM** CPU, with Zba and a bignum coprocessor, into Qwen3.5-4B. Its code,
 data, registers and program counter all live in Gated DeltaNet state, in 11 layers in front of
 Qwen's. The CPU passes the official riscv-tests suites and runs gcc-compiled C and MicroPython
-exactly. Inside Qwen it answers the `calc` tool: the machine in the weights runs a compiled C
-calculator, and the model writes the `<tool_response>` itself.
+exactly. Inside Qwen it answers `calc`, which only borrows Qwen's tool-call format: nothing on the
+host executes it. The machine in the weights runs a compiled C calculator, and the model writes the
+`<tool_response>` itself.
 
 | Benchmark | Base Qwen3.5-4B | **Qwenputer** | McNemar p | Python tool (host) |
 |---|---|---|---|---|
@@ -191,8 +192,16 @@ uv run python -m chipformer.rv.chat qwenputer-rv --firmware tests/data/rv/calc-b
 The `RvChat` driver boots the CPU by loading its firmware into the DeltaNet state after the
 prompt, and keeps the CPU's trace tokens out of Qwen's layers while decoding. Every token still
 comes from the weights. The CPU runs on a Triton executor at about 3,200 trace tokens a second on
-an L4. [`experimental/riscv/docs/rv32.md`](experimental/riscv/docs/rv32.md) has
-the design and every measurement.
+an L4.
+
+You can check that nothing else answers. The driver, `chipformer/rv/chat.py`, has no tool runner
+and does nothing special at `</tool_call>`: at every position it takes the model's own next token.
+Each run prints `head mismatches 0` when the stock output head agrees with the computer on every
+token of the tool response, and `--check` replays the whole output through a reference RISC-V
+machine.
+
+[`experimental/riscv/docs/rv32.md`](experimental/riscv/docs/rv32.md) has the design and every
+measurement.
 
 ## Citing
 
