@@ -58,10 +58,6 @@ the model prints   " 478128321"
 Qwen continues     as if it had written the number itself
 ```
 
-**Memory.** Qwen3.5's Gated DeltaNet layers update their state with the delta rule. With a one-hot
-key, that update overwrites one row exactly, so the state works as RAM. The computer's registers,
-memory and program counter live there.
-
 **Running.** Each generated trace token is one write to that memory. A few tokens make one
 instruction, so the trace is the machine's execution log. The MLPs do the arithmetic as exact
 lookup tables, and every value stays exact in bf16.
@@ -74,6 +70,29 @@ Qwen's state is frozen while the computer runs.
 signed and decimal numbers, mod, gcd, and whole expressions with brackets. Stock checkpoints give
 every layer the same width, so the merged model is 14 GB vs 9.3 GB for base Qwen. The extra is
 almost all zeros, so the download is about the same size.
+
+### Gated DeltaNet as RAM
+
+<p align="center"><img src="docs/gdn-ram.png" alt="Gated DeltaNet state used as RAM: a one-hot key overwrites one row, a one-hot query reads it back, and the CPU's registers, memory and program counter live in DeltaNet heads." width="100%"></p>
+
+Qwen3.5 mixes full attention with Gated DeltaNet layers. Each DeltaNet head keeps a state matrix
+and updates it at every token with the gated delta rule (panel **a**). We open the gate
+(α = 1, so nothing fades) and set the write strength to β = 1. The key is a one-hot vector that
+picks a single row, so the update replaces that row with the value and leaves every other row
+exactly as it was. That is a RAM write. Reading is the same head's query: a one-hot query returns
+exactly that row (panel **b**).
+
+The rest is layout (panel **c**). The low bits of an address choose the head and the remaining
+bits choose the row, and each row stores one byte as bits. The machine's memory is spread over a
+few dozen heads, and its registers, program counter and call stack each get heads of their own.
+Each key head drives two value heads, which doubles the capacity. The gate is useful too:
+α = 0 for one token wipes a whole head (that's how the screen is cleared), and α = ½ makes a head
+halve every step, which the circuit uses as a counter.
+
+Writes arrive through the token stream, so the trace is the computer's execution log. An `ADDR`
+token names the row, the `VAL` token after it carries the value, and `STEP` ends the instruction.
+Nothing here needed a new layer type: the computer's memory is the same Gated DeltaNet
+recurrence Qwen3.5 already uses for language.
 
 More in [`docs/`](docs): the architecture ([`q35.md`](docs/q35.md)), the arithmetic library
 ([`q35-skills.md`](docs/q35-skills.md)), an exact in-weights object store
