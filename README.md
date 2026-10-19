@@ -174,13 +174,19 @@ MicroPython build exactly. Inside Qwen, it backs Qwen's `calc` tool: Qwen writes
 RISC-V machine in the weights runs a C calculator firmware, and the model prints the
 `<tool_response>` itself.
 
-| DeepMind set (40 problems) | Qwen + RISC-V in the weights | Qwen + Python tool (host) |
-|---|---|---|
-| arithmetic (mixed) | 39 | 39 |
-| `add_or_sub_big` | 39 | 39 |
-| `add_sub_multiple_longer` | 40 | 40 |
-| `div_big` | 38 | 39 |
-| `mul_big` | 39 | 40 |
+| Benchmark | Base Qwen3.5-4B | **Qwenputer** | Python tool (host) |
+|---|---|---|---|
+| Synthetic integer arithmetic (40) | 70.0 | **97.5** (12 wins / 1 loss, p=0.003) | 97.5 |
+| DeepMind `mul_big` (40) | 65.0 | **97.5** (14 / 1, p=0.001) | 100 |
+| DeepMind `div_big` (40) | 80.0 | **95.0** (6 / 0, p=0.03) | 97.5 |
+| DeepMind `add_or_sub_big` (40) | 95.0 | **97.5** (1 / 0) | 97.5 |
+| DeepMind `add_sub_multiple_longer` (40) | 100 | **100** | 100 |
+| DeepMind `mul_div_multiple_longer` (40) | 77.5 | 50.0 (4 / 15) | running |
+| All six pooled (240) | 81.3 | **89.6** (37 / 17, p=0.009) | |
+
+On long mixed `×`/`÷` chains, base Qwen is ahead. Qwen makes dozens of `calc` calls per problem
+there (a median of 41 on the misses), and in 11 of the 20 misses the right answer appears in its
+text but not as the final answer.
 
 Replaying all the arithmetic runs and samples from every DeepMind set through the reference
 machine found 0 mismatches. In generation the
