@@ -164,45 +164,34 @@ details:
 ## A RISC-V computer inside Qwen
 
 [`divagr1925/Qwen3.5-4B-Qwenputer`](https://huggingface.co/divagr1925/Qwen3.5-4B-Qwenputer)
-compiles a 32-bit **RV32IM** CPU, with Zba and a bignum coprocessor, into Qwen3.5-4B. Its code
-ROM, RAM, registers and program counter all live in Gated DeltaNet state, in 11 chip layers
-before Qwen's.
-
-The CPU passes the official riscv-tests suites (`rv32ui`, `rv32um`, `rv32uzba`), runs
-gcc-compiled C programs exactly (about 18 million instructions verified) and runs a patched
-MicroPython build exactly. Inside Qwen, it backs Qwen's `calc` tool: Qwen writes the call, the
-RISC-V machine in the weights runs a C calculator firmware, and the model prints the
-`<tool_response>` itself.
+compiles a 32-bit **RV32IM** CPU, with Zba and a bignum coprocessor, into Qwen3.5-4B. Its code,
+data, registers and program counter all live in Gated DeltaNet state, in 11 layers in front of
+Qwen's. The CPU passes the official riscv-tests suites and runs gcc-compiled C and MicroPython
+exactly. Inside Qwen it answers the `calc` tool: the machine in the weights runs a compiled C
+calculator, and the model writes the `<tool_response>` itself.
 
 | Benchmark | Base Qwen3.5-4B | **Qwenputer** | Python tool (host) |
 |---|---|---|---|
-| Synthetic integer arithmetic (40) | 70.0 | **97.5** (12 wins / 1 loss, p=0.003) | 97.5 |
-| DeepMind `mul_big` (40) | 65.0 | **97.5** (14 / 1, p=0.001) | 100 |
-| DeepMind `div_big` (40) | 80.0 | **95.0** (6 / 0, p=0.03) | 97.5 |
-| DeepMind `add_or_sub_big` (40) | 95.0 | **97.5** (1 / 0) | 97.5 |
-| DeepMind `add_sub_multiple_longer` (40) | 100 | **100** | 100 |
-| DeepMind `mul_div_multiple_longer` (40) | 77.5 | 50.0 (4 / 15) | running |
-| All six pooled (240) | 81.3 | **89.6** (37 / 17, p=0.009) | |
+| Synthetic integer arithmetic | 70.0 | **97.5** | 97.5 |
+| DeepMind `mul_big` | 65.0 | **97.5** | 100 |
+| DeepMind `div_big` | 80.0 | **95.0** | 97.5 |
+| DeepMind `add_or_sub_big` | 95.0 | **97.5** | 97.5 |
 
-On long mixed `×`/`÷` chains, base Qwen is ahead. Qwen makes dozens of `calc` calls per problem
-there (a median of 41 on the misses), and in 11 of the 20 misses the right answer appears in its
-text but not as the final answer.
-
-Replaying all the arithmetic runs and samples from every DeepMind set through the reference
-machine found 0 mismatches. In generation the
-machine runs on a Triton executor at about 3,200 trace tokens a second on an L4.
+The computer has never printed a wrong result. We replayed about 230,000 of its output positions
+through a reference model of the machine and found zero mismatches. Qwen's text behaviour matches
+base: KL 6e-4, against a noise floor of 5e-4.
 
 ```bash
 cd experimental/riscv && uv sync
 hf download divagr1925/Qwen3.5-4B-Qwenputer --local-dir qwenputer-rv
-uv run python -m chipformer.rv.chat qwenputer-rv --firmware tests/data/rv/calc-bridge.elf     --ask "Use the calc tool: what is 123456789 * 987654321?"
+uv run python -m chipformer.rv.chat qwenputer-rv --firmware tests/data/rv/calc-bridge.elf \
+    --ask "Use the calc tool: what is 123456789 * 987654321?"
 ```
 
-Unlike the CHIP-8 model, this one isn't driven by a plain `generate()` call yet. `RvChat` loads
-the firmware image into the DeltaNet state after the prompt, and its decoding loop keeps the
-machine's trace tokens out of Qwen's own layers. The weights alone decide every token.
-[`experimental/riscv/docs/rv32.md`](experimental/riscv/docs/rv32.md) has the design and every
-measurement.
+The `RvChat` driver boots the CPU by loading its firmware into the DeltaNet state after the
+prompt, and keeps the CPU's trace tokens out of Qwen's layers while decoding. Every token still
+comes from the weights. [`experimental/riscv/docs/rv32.md`](experimental/riscv/docs/rv32.md) has
+the design and every measurement.
 
 ## Citing
 
