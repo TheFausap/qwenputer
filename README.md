@@ -36,9 +36,7 @@ Python interpreter on the host, which is the ceiling for this kind of help.
 | DeepMind clean big add / mul (200) | 69.5 | **99.0** (61 / 2, p=4e-16) | 98.5 |
 
 The computer has never printed a wrong result. We replayed about 3.9 million positions of model
-output through a reference simulator of the circuit and found zero mismatches. Qwen's own
-behaviour is unchanged within noise: on MMLU and ARC the KL divergence of its answer choices
-against base Qwen is about 7e-4, and accuracy moves by less than half a point.
+output through a reference simulator of the circuit and found zero mismatches. MMLU: 71.9 vs 71.7 for base (99% identical answers, KL 7e-4).
 
 It does not help everywhere. GSM8K and GSM-Hard are ties, because word problems are limited by
 reasoning rather than arithmetic. On the long DeepMind expression chains (`mixed_longer`,
