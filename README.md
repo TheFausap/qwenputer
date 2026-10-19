@@ -71,16 +71,11 @@ signed and decimal numbers, mod, gcd, and whole expressions with brackets. Stock
 every layer the same width, so the merged model is 14 GB vs 9.3 GB for base Qwen. The extra is
 almost all zeros, so the download is about the same size.
 
-### Gated DeltaNet as RAM
+### We use Gated DeltaNet as RAM
 
 <p align="center"><img src="docs/gdn-ram.png" alt="Gated DeltaNet state used as RAM: a one-hot key overwrites one row, a one-hot query reads it back, and the CPU's registers, memory and program counter live in DeltaNet heads." width="100%"></p>
 
-Qwen3.5 mixes full attention with Gated DeltaNet layers. Each DeltaNet head keeps a state matrix
-and updates it at every token with the gated delta rule (panel **a**). We open the gate
-(α = 1, so nothing fades) and set the write strength to β = 1. The key is a one-hot vector that
-picks a single row, so the update replaces that row with the value and leaves every other row
-exactly as it was. That is a RAM write. Reading is the same head's query: a one-hot query returns
-exactly that row (panel **b**).
+We use Qwen3.5's own Gated DeltaNet layers as the computer's RAM. Qwen3.5 mixes full attention with these layers, and each DeltaNet head keeps a state matrix that it updates at every token with the gated delta rule (panel **a**). We open the gate (α = 1, so nothing fades) and set the write strength to β = 1. Each key is a one-hot vector picking a single row, so every update replaces exactly that row with the value and leaves the rest untouched. That's a RAM write. A RAM read is the same head's query: a one-hot query returns exactly that row (panel **b**).
 
 The rest is layout (panel **c**). The low bits of an address choose the head and the remaining
 bits choose the row, and each row stores one byte as bits. The machine's memory is spread over a
