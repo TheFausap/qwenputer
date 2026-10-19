@@ -170,12 +170,12 @@ Qwen's. The CPU passes the official riscv-tests suites and runs gcc-compiled C a
 exactly. Inside Qwen it answers the `calc` tool: the machine in the weights runs a compiled C
 calculator, and the model writes the `<tool_response>` itself.
 
-| Benchmark | Base Qwen3.5-4B | **Qwenputer** | Python tool (host) |
-|---|---|---|---|
-| Synthetic integer arithmetic | 70.0 | **97.5** | 97.5 |
-| DeepMind `mul_big` | 65.0 | **97.5** | 100 |
-| DeepMind `div_big` | 80.0 | **95.0** | 97.5 |
-| DeepMind `add_or_sub_big` | 95.0 | **97.5** | 97.5 |
+| Benchmark | Base Qwen3.5-4B | **Qwenputer** | McNemar p | Python tool (host) |
+|---|---|---|---|---|
+| Synthetic integer arithmetic | 70.0 | **97.5** | 0.003 | 97.5 |
+| DeepMind `mul_big` | 65.0 | **97.5** | 0.001 | 100 |
+| DeepMind `div_big` | 80.0 | **95.0** | 0.03 | 97.5 |
+| DeepMind `add_or_sub_big` | 95.0 | **97.5** | 1.0 | 97.5 |
 
 The computer has never printed a wrong result. We replayed about 230,000 of its output positions
 through a reference model of the machine and found zero mismatches. Qwen's text behaviour matches
@@ -190,7 +190,8 @@ uv run python -m chipformer.rv.chat qwenputer-rv --firmware tests/data/rv/calc-b
 
 The `RvChat` driver boots the CPU by loading its firmware into the DeltaNet state after the
 prompt, and keeps the CPU's trace tokens out of Qwen's layers while decoding. Every token still
-comes from the weights. [`experimental/riscv/docs/rv32.md`](experimental/riscv/docs/rv32.md) has
+comes from the weights. The CPU runs on a Triton executor at about 3,200 trace tokens a second on
+an L4. [`experimental/riscv/docs/rv32.md`](experimental/riscv/docs/rv32.md) has
 the design and every measurement.
 
 ## Citing
