@@ -58,7 +58,7 @@ the model prints   " 478128321"
 Qwen continues     as if it had written the number itself
 ```
 
-**Running.** Each generated trace token is one write to that memory. A few tokens make one
+**Running.** Each generated trace token is one write to the computer's memory (see below). A few tokens make one
 instruction, so the trace is the machine's execution log. The MLPs do the arithmetic as exact
 lookup tables, and every value stays exact in bf16.
 
