@@ -39,14 +39,14 @@
   <rect width="1600" height="500" fill="url(#grid)"/>
 
   <g font-family="Arial, Helvetica, sans-serif">
-    <text x="44" y="232" fill="#eee" font-size="124" font-weight="500" letter-spacing="-5">Qwen<tspan fill="#8b7cf6">puter</tspan></text>
-    <text x="50" y="296" fill="#c8c8c8" font-size="36">A computer, compiled into</text>
-    <text x="50" y="342" fill="#c8c8c8" font-size="36">the weights of a language model.</text>
+    <text x="86" y="200" fill="#eee" font-size="162" font-weight="500" letter-spacing="-7">Qwen<tspan fill="#8b7cf6">puter</tspan></text>
+    <text x="94" y="272" fill="#c8c8c8" font-size="42" letter-spacing="-0.5">A computer, compiled into</text>
+    <text x="94" y="326" fill="#c8c8c8" font-size="42" letter-spacing="-0.5">the weights of a language model.</text>
   </g>
 
-  <g transform="translate(900 0)" font-family="Consolas, Menlo, monospace">
+  <g transform="translate(960 0)" font-family="Consolas, Menlo, monospace">
     <g font-size="30">
-      <text x="0" y="58" fill="#777">48213 × 9917 =</text>
+      <text x="0" y="58" fill="#8a8a8a">48213 × 9917 =</text>
       <g fill="#8b7cf6">
         <text x="250" y="58" opacity="0">4<animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.40;0.41;0.95;1" dur="7s" repeatCount="indefinite"/></text>
         <text x="268" y="58" opacity="0">7<animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.45;0.46;0.95;1" dur="7s" repeatCount="indefinite"/></text>
