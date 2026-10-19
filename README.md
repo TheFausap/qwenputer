@@ -27,13 +27,13 @@ These are Qwen3.5-4B scores, greedy decoding. Each row compares base Qwen and Qw
 same problems, with a paired McNemar test. The Python-tool column is base Qwen calling a real
 Python interpreter on the host, which is the ceiling for this kind of help.
 
-| Benchmark | Base Qwen3.5-4B | **Qwenputer** | Python tool (host) |
-|---|---|---|---|
-| NUPA integer add / sub / mul, 3-20 digits (576) | 48.6 | **100.0** (296 wins / 0 losses, p<1e-80) | 100.0 |
-| DeepMind arithmetic, 6 sets pooled (600) | 80.8 | **92.3** (90 / 21, p=2e-11) | 94.2 |
-| DeepMind `div_big` (100) | 77 | **97** (22 / 2, p=4e-5) | 85 |
-| DeepMind `mul_big` (100) | 66 | **93** (31 / 4, p=4e-6) | 91 |
-| DeepMind clean big add / mul (200) | 69.5 | **99.0** (61 / 2, p=4e-16) | 98.5 |
+| Benchmark | Base Qwen3.5-4B | **Qwenputer** | McNemar p | Python tool (host) |
+|---|---|---|---|---|
+| NUPA integer add / sub / mul, 3-20 digits (576) | 48.6 | **100.0** | <1e-80 | 100.0 |
+| DeepMind arithmetic, 6 sets pooled (600) | 80.8 | **92.3** | 2e-11 | 94.2 |
+| DeepMind `div_big` (100) | 77 | **97** | 4e-5 | 85 |
+| DeepMind `mul_big` (100) | 66 | **93** | 4e-6 | 91 |
+| DeepMind clean big add / mul (200) | 69.5 | **99.0** | 4e-16 | 98.5 |
 
 The computer has never printed a wrong result. We replayed about 3.9 million positions of model
 output through a reference simulator of the circuit and found zero mismatches. MMLU: 71.9 vs 71.7 for base (99% identical answers, KL 7e-4).
@@ -167,9 +167,13 @@ details:
 compiles a 32-bit **RV32IM** CPU, with Zba and a bignum coprocessor, into Qwen3.5-4B. Its code,
 data, registers and program counter all live in Gated DeltaNet state, in 11 layers in front of
 Qwen's. The CPU passes the official riscv-tests suites and runs gcc-compiled C and MicroPython
-exactly. Inside Qwen it answers `calc`, which only borrows Qwen's tool-call format: nothing on the
-host executes it. The machine in the weights runs a compiled C calculator, and the model writes the
-`<tool_response>` itself.
+exactly.
+
+Qwen3.5 was trained to call tools in a fixed format: it writes a `<tool_call>` block and then reads
+a `<tool_response>`. Qwenputer reuses that format for its own computer. The prompt lists a `calc`
+tool and Qwen calls it like any other tool, but nothing outside the model runs it. The computer
+layers read the call and run it on the RISC-V CPU, and the model writes the `<tool_response>`
+itself, digit by digit. You can run it with no runtime or tool executor at all.
 
 | Benchmark | Base Qwen3.5-4B | **Qwenputer** | McNemar p | Python tool (host) |
 |---|---|---|---|---|
@@ -193,12 +197,6 @@ The `RvChat` driver boots the CPU by loading its firmware into the DeltaNet stat
 prompt, and keeps the CPU's trace tokens out of Qwen's layers while decoding. Every token still
 comes from the weights. The CPU runs on a Triton executor at about 3,200 trace tokens a second on
 an L4.
-
-You can check that nothing else answers. The driver, `chipformer/rv/chat.py`, has no tool runner
-and does nothing special at `</tool_call>`: at every position it takes the model's own next token.
-Each run prints `head mismatches 0` when the stock output head agrees with the computer on every
-token of the tool response, and `--check` replays the whole output through a reference RISC-V
-machine.
 
 [`experimental/riscv/docs/rv32.md`](experimental/riscv/docs/rv32.md) has the design and every
 measurement.

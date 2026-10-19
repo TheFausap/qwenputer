@@ -61,8 +61,8 @@ def arrow(ax, p, q, color=DARK, rad=0.0):
 def panel(ax, x0, x1, tag, title):
     ax.add_patch(FancyBboxPatch((x0, 0.25), x1 - x0, 9.85, boxstyle="round,pad=0,rounding_size=0.25",
                                 fill=False, edgecolor="#c9c9c9", lw=1.3))
-    ax.text(x0 + 0.35, TITLE_Y, tag, fontsize=21, fontweight="bold", va="center")
-    ax.text(x0 + 0.95, TITLE_Y, title, fontsize=15.5, va="center")
+    ax.text(x0 + 0.35, TITLE_Y - 0.18, tag, fontsize=19, fontweight="bold", va="baseline")
+    ax.text(x0 + 0.9, TITLE_Y - 0.18, title, fontsize=17, va="baseline")
     return (x0 + x1) / 2
 
 
@@ -74,7 +74,7 @@ ax.set_aspect("equal")
 ax.axis("off")
 
 # (a) write ------------------------------------------------------------------------------------
-cx = panel(ax, 0.2, 12.6, "a", "Write: the delta rule as a memory store")
+cx = panel(ax, 0.2, 12.6, "a", "Write a row")
 ax.text(cx, FORMULA_Y, r"$S_t = \alpha_t S_{t-1} + \beta_t\, k_t\,(v_t - \alpha_t S_{t-1}^{T} k_t)^{T}$",
         ha="center", va="center", fontsize=16)
 vec(ax, 0.9, TOP, ONEHOT, color=RED)
@@ -91,7 +91,7 @@ ax.text(cx, CAPTION_Y, r"$\alpha_t = 1$ (gate open), $\beta_t = 1$, $k_t = e_r$:
         ha="center", va="center", fontsize=12.5, color=NOTE)
 
 # (b) read -------------------------------------------------------------------------------------
-cx = panel(ax, 12.9, 21.5, "b", r"Read: address $\rightarrow$ contents")
+cx = panel(ax, 12.9, 21.5, "b", "Read it back")
 ax.text(cx, FORMULA_Y, r"$o_t = S_t^{T} q_t$", ha="center", va="center", fontsize=16)
 vec(ax, 14.0, TOP, ONEHOT, color=RED)
 label(ax, 14.0 + CELL / 2, r"query $q_t = e_r$")
@@ -104,7 +104,7 @@ ax.text(cx, CAPTION_Y, "a one-hot query returns exactly one row", ha="center", v
         fontsize=12.5, color=NOTE)
 
 # (c) a CPU in the state -----------------------------------------------------------------------
-cx = panel(ax, 21.8, 33.8, "c", "A CPU laid out in DeltaNet heads")
+cx = panel(ax, 21.8, 33.8, "c", "Run a CPU on it")
 ax.text(cx, FORMULA_Y, "rows hold registers, memory bytes and the program counter",
         ha="center", va="center", fontsize=13, color=NOTE)
 C = 0.45
