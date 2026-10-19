@@ -4,7 +4,7 @@
 
 > A computer, compiled into the weights of a language model.
 
-[Model on Hugging Face](https://huggingface.co/divagr1925/Qwen3.5-4B-Qwenputer) · [The standalone CHIP-8 transformer it grew from](https://github.com/divagr18/chipformer) · [MIT License](LICENSE)
+[RISC-V model](https://huggingface.co/divagr1925/Qwen3.5-4B-Qwenputer) · [CHIP-8 model](https://huggingface.co/divagr1925/Qwen3.5-4B-Qwenputer-CHIP8) · [The standalone CHIP-8 transformer it grew from](https://github.com/divagr18/chipformer) · [MIT License](LICENSE)
 
 Qwenputer is Qwen3.5-4B with a working computer compiled directly into its weights. It isn't a
 plugin, a tool or a sandbox. It's a CPU, a big-number maths library and its memory, written as
@@ -114,10 +114,13 @@ then reads the printed answer like ordinary text.
 
 ## Quickstart
 
+This runs the CHIP-8 model, which the benchmarks above come from. The RISC-V model is
+[further down](#a-risc-v-computer-inside-qwen).
+
 ```bash
 git clone https://github.com/divagr18/qwenputer && cd qwenputer
 uv sync
-hf download divagr1925/Qwen3.5-4B-Qwenputer --local-dir qwenputer-4b
+hf download divagr1925/Qwen3.5-4B-Qwenputer-CHIP8 --local-dir qwenputer-4b
 
 uv run python -m chipformer.q35.demo qwenputer-4b                   # Qwen uses its tool-call syntax
 uv run python -m chipformer.q35.demo qwenputer-4b --inline --nudge  # plain inline arithmetic
@@ -158,17 +161,42 @@ details:
 - the optional decoder settings our benchmarks used (`fp` and `tc` in `BatchDecoder`), which make
   inline mode stronger
 
-## Experimental: a RISC-V computer inside Qwen
+## A RISC-V computer inside Qwen
 
-[`experimental/riscv/`](experimental/riscv) takes the idea further. It compiles a 32-bit
-**RV32IM** CPU, with Zba and a bignum coprocessor, into the same Qwen3.5 layer types.
+[`divagr1925/Qwen3.5-4B-Qwenputer`](https://huggingface.co/divagr1925/Qwen3.5-4B-Qwenputer)
+compiles a 32-bit **RV32IM** CPU, with Zba and a bignum coprocessor, into Qwen3.5-4B. Its code
+ROM, RAM, registers and program counter all live in Gated DeltaNet state, in 11 chip layers
+before Qwen's.
 
-It passes the official riscv-tests suites (`rv32ui`, `rv32um`, `rv32uzba`). It runs
-gcc-compiled C programs exactly, about 18 million instructions verified so far, and it runs a
-patched MicroPython build exactly. Inside Qwen3.5-4B it already answers end to end: Qwen asks,
-the RISC-V machine in the weights computes, Qwen reads the answer. It is a work in progress;
-the compact executor currently runs about 3,700 instructions a second per stream on an L4.
-[`experimental/riscv/docs/rv32.md`](experimental/riscv/docs/rv32.md) has the details.
+The CPU passes the official riscv-tests suites (`rv32ui`, `rv32um`, `rv32uzba`), runs
+gcc-compiled C programs exactly (about 18 million instructions verified) and runs a patched
+MicroPython build exactly. Inside Qwen, it backs Qwen's `calc` tool: Qwen writes the call, the
+RISC-V machine in the weights runs a C calculator firmware, and the model prints the
+`<tool_response>` itself.
+
+| DeepMind set (40 problems) | Qwen + RISC-V in the weights | Qwen + Python tool (host) |
+|---|---|---|
+| arithmetic (mixed) | 39 | 39 |
+| `add_or_sub_big` | 39 | 39 |
+| `add_sub_multiple_longer` | 40 | 40 |
+| `div_big` | 38 | 39 |
+| `mul_big` | 39 | 40 |
+
+Replaying all the arithmetic runs and samples from every DeepMind set through the reference
+machine found 0 mismatches. In generation the
+machine runs on a Triton executor at about 3,200 trace tokens a second on an L4.
+
+```bash
+cd experimental/riscv && uv sync
+hf download divagr1925/Qwen3.5-4B-Qwenputer --local-dir qwenputer-rv
+uv run python -m chipformer.rv.chat qwenputer-rv --firmware tests/data/rv/calc-bridge.elf     --ask "Use the calc tool: what is 123456789 * 987654321?"
+```
+
+Unlike the CHIP-8 model, this one isn't driven by a plain `generate()` call yet. `RvChat` loads
+the firmware image into the DeltaNet state after the prompt, and its decoding loop keeps the
+machine's trace tokens out of Qwen's own layers. The weights alone decide every token.
+[`experimental/riscv/docs/rv32.md`](experimental/riscv/docs/rv32.md) has the design and every
+measurement.
 
 ## Citing
 

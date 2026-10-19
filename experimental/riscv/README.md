@@ -1,4 +1,6 @@
-# Experimental: a RISC-V computer inside Qwen
+# A RISC-V computer inside Qwen
+
+Model: [divagr1925/Qwen3.5-4B-Qwenputer](https://huggingface.co/divagr1925/Qwen3.5-4B-Qwenputer).
 
 This folder compiles a 32-bit **RV32IM** CPU into stock Qwen3.5 layers, using the same compiler as
 the main project. The CPU also has Zba and a bignum coprocessor. It is a self-contained snapshot:
@@ -20,7 +22,7 @@ merged with the main tree yet.
 The machine has 256 KB of code ROM, 128 KB of read-only data and 32 KB of RAM, all held in Gated
 DeltaNet state. It takes 11 chip layers and about 1M nonzero weights, and costs about 1.2-1.4
 tokens per instruction. A compact executor runs about 3,700 instructions a second per stream on
-an L4.
+an L4, and in generation it runs at about 3,200 trace tokens a second.
 
 [`docs/rv32.md`](docs/rv32.md) has the design and every measurement, and
 [`docs/rv32-p3-status.md`](docs/rv32-p3-status.md) has the in-Qwen status.

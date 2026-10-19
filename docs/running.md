@@ -108,7 +108,7 @@ end.
 
 ## Release checks (A10G 24 GB, 2026-10-19)
 
-**The checkpoint.** [divagr1925/Qwen3.5-4B-Qwenputer](https://huggingface.co/divagr1925/Qwen3.5-4B-Qwenputer).
+**The checkpoint.** [divagr1925/Qwen3.5-4B-Qwenputer-CHIP8](https://huggingface.co/divagr1925/Qwen3.5-4B-Qwenputer-CHIP8).
 - Size: 14.65 GB in 7 shards.
 - Contents: config, tokenizer, `chat_template.jinja`, `generation_config.json`, `chipformer.json`,
   LICENSE, preprocessor configs.

@@ -85,6 +85,12 @@ def main() -> None:
     ap.add_argument("--firmware", default="tests/data/rv/calc-bridge.elf")
     ap.add_argument("--budget", type=int, default=4096, help="Qwen tokens per problem")
     ap.add_argument("--max-chip", type=int, default=200000)
+    ap.add_argument("--chip-path", default="executor", choices=("executor", "hf"),
+                    help="rv1's chip layers: the circuit's Triton executor, or their HF modules")
+    ap.add_argument("--batch", type=int, default=1, help="rv1: conversations decoded at once")
+    ap.add_argument("--max-len", type=int, default=6144, help="rv1 --batch: Qwen KV slots")
+    ap.add_argument("--shard", default=None, help="i/k: every k-th problem from the i-th")
+    ap.add_argument("--ids", default=None, help="comma-separated problem ids (a subset)")
     args = ap.parse_args()
     n = args.n or (40 if args.data == "arith" else None)
     probs = problems(args.data, n, args.seed)
@@ -93,7 +99,7 @@ def main() -> None:
     done = {json.loads(x)["id"] for x in out.read_text().splitlines()} if out.exists() else set()
     tool = args.cond != "base_nudge"
     if args.cond == "rv1":
-        chat = RvChat(args.model)
+        chat = RvChat(args.model, executor=args.chip_path == "executor")
         tok = chat.tok
     else:
         from transformers import AutoModelForImageTextToText, AutoTokenizer
@@ -101,46 +107,132 @@ def main() -> None:
         tok = AutoTokenizer.from_pretrained(args.model)
         model = AutoModelForImageTextToText.from_pretrained(args.model, dtype=torch.bfloat16)
         model = model.to("cuda").eval()
-    for p in probs:
-        if p["id"] in done:
-            continue
-        msgs = [{"role": "system", "content": NUDGE if tool else NUDGE_NONE},
+    if args.shard:
+        i, k = map(int, args.shard.split("/"))
+        probs = probs[i::k]
+    if args.ids:
+        want = set(args.ids.split(","))
+        probs = [p for p in probs if p["id"] in want]
+    todo = [p for p in probs if p["id"] not in done]
+    t_all = time.time()
+
+    def msgs_of(p):
+        return [{"role": "system", "content": NUDGE if tool else NUDGE_NONE},
                 {"role": "user", "content": p["question"] + E.SUFFIX}]
-        t0 = time.time()
+
+    def rv1_job(p):
+        ids = chat.prompt_ids(msgs_of(p))
+        m = ref.Machine.from_program(elf.program(args.firmware))
+        BR.park(m)
+        m2 = ref.Machine.from_program(elf.program(args.firmware))
+        BR.park(m2)
+        lock = BR.Session(chat.T, m2)  # every circuit token checked against the reference
+        lock.history(ids)
+        return ids, m, lock
+
+    def rv1_fields(ids, lock, r):
+        gen = r["tokens"]
+        outs = [chat.T.decode_bytes(e).decode("utf-8", "replace") for e in lock.runs]
+        return chat.text_of(gen), dict(
+            prompt_ids=ids, gen_ids=gen, calls=len(lock.runs),
+            n_qwen=r["text_tokens"] - sum(len(e) for e in lock.runs),
+            n_chip=r["chip_tokens"], lock_error=r["lock_error"],
+            head_mismatch=r["head_mismatch"], gen_seconds=round(r["seconds"], 1),
+            chip_path=args.chip_path, chip_seconds=r["chip_seconds"],
+            text_seconds=r["text_seconds"], batch=args.batch,
+            results=[o.split("\n")[2] if o.count("\n") > 2 else o for o in outs])
+
+    def emit(p, text, fields, seconds):
         rec = {"id": p["id"], "gold": p["gold"], "question": p["question"], "cond": args.cond}
-        if args.cond == "rv1":
-            ids = chat.prompt_ids(msgs)
-            m = ref.Machine.from_program(elf.program(args.firmware))
-            BR.park(m)
-            m2 = ref.Machine.from_program(elf.program(args.firmware))
-            BR.park(m2)
-            lock = BR.Session(chat.T, m2)  # every circuit token checked against the reference
-            lock.history(ids)
-            r = chat.generate(ids, m, args.budget, max_chip=args.max_chip, check_head=True,
-                              lock=lock)
-            gen = r["tokens"]
-            text = chat.text_of(gen)
-            outs = [chat.T.decode_bytes(e).decode("utf-8", "replace") for e in lock.runs]
-            rec.update(prompt_ids=ids, gen_ids=gen, calls=len(lock.runs),
-                       n_qwen=r["text_tokens"] - sum(len(e) for e in lock.runs),
-                       n_chip=r["chip_tokens"], lock_error=r["lock_error"],
-                       head_mismatch=r["head_mismatch"], gen_seconds=round(r["seconds"], 1),
-                       results=[o.split("\n")[2] if o.count("\n") > 2 else o for o in outs])
-        else:
-            ids = tok.apply_chat_template(msgs, tools=[CALC_TOOL] if tool else None,
-                                          add_generation_prompt=True, enable_thinking=False,
-                                          tokenize=True)
-            ids = ids if isinstance(ids, list) else ids["input_ids"]
-            gen, calls, own = run_base(model, tok, ids, tool, args.budget)
-            text = tok.decode(gen, skip_special_tokens=False)
-            rec.update(calls=calls, n_qwen=own, n_chip=0)
+        rec.update(fields)
         rec.update(AB.exact_fields(p, text))
-        rec.update(seconds=round(time.time() - t0, 1), text=text)
+        rec.update(seconds=round(seconds, 1), text=text)
         with out.open("a", encoding="utf-8") as f:
             f.write(json.dumps(rec, ensure_ascii=False) + "\n")
         keys = ("id", "gold", "pred_exact", "exact", "calls", "n_qwen", "n_chip", "seconds",
                 "lock_error", "head_mismatch")
         print(json.dumps({k: rec[k] for k in keys if k in rec}), flush=True)
+
+    if args.cond == "rv1" and args.batch > 1:
+        from chipformer.rv.rvbatch import Job, RvBatch
+
+        rb = RvBatch(chat, args.batch, args.max_len)
+
+        def jobs():
+            for p in todo:
+                ids, m, lock = rv1_job(p)
+                yield Job(p["id"], ids, m, lock, {"p": p})
+
+        def finished(job, r):
+            text, fields = rv1_fields(job.ids, job.lock, r)
+            emit(job.extra["p"], text, fields, r["seconds"])
+
+        st = rb.run(jobs(), args.budget, args.max_chip, finished)
+        print(json.dumps({"batch_stats": st}), flush=True)
+    if args.cond != "rv1" and args.batch > 1:  # base Qwen: q35's BatchDecoder
+        from chipformer.q35.batch import BatchDecoder
+
+        prompts = []
+        for p in todo:
+            ids = tok.apply_chat_template(msgs_of(p), tools=[CALC_TOOL] if tool else None,
+                                          add_generation_prompt=True, enable_thinking=False,
+                                          tokenize=True)
+            prompts.append(ids if isinstance(ids, list) else ids["input_ids"])
+        tcc = tok.convert_tokens_to_ids("</tool_call>")
+        state = [{"forced": [], "own": 0, "gen": [], "calls": 0} for _ in todo]
+
+        def hook(i, t):
+            """pytool: after </tool_call> the next tokens are the host's response (forced);
+            the row stops after ``budget`` of Qwen's own tokens, as run_base does."""
+            s = state[i]
+            if s["forced"]:
+                t = s["forced"].pop(0)
+                s["gen"].append(t)
+                return t, False
+            s["own"] += 1
+            s["gen"].append(t)
+            if tool and t == tcc:
+                txt = tok.decode(s["gen"], skip_special_tokens=False)
+                mm = re.findall(r"<parameter=[^>]*>(.*?)</parameter>",
+                                txt.split("<tool_call>")[-1], re.S)
+                s["forced"] = tok(calc_response(mm[0] if mm else ""),
+                                  add_special_tokens=False).input_ids
+                s["calls"] += 1
+            return t, s["own"] >= args.budget and not s["forced"]
+
+        t0 = time.time()
+        max_len = -(-(max(map(len, prompts)) + 2 * args.budget) // 1024) * 1024
+        bd = BatchDecoder(model, batch=args.batch, max_len=max_len)
+
+        def fin(i, toks):
+            s = state[i]
+            text = tok.decode(toks, skip_special_tokens=False)
+            emit(todo[i], text, dict(calls=s["calls"], n_qwen=s["own"], n_chip=0,
+                                     batch=args.batch), time.time() - t0)
+
+        if prompts:
+            bd.run(prompts, 2 * args.budget, on_done=fin, hook=hook)
+    for p in todo if args.batch == 1 else []:
+        t0 = time.time()
+        if args.cond == "rv1":
+            ids, m, lock = rv1_job(p)
+            r = chat.generate(ids, m, args.budget, max_chip=args.max_chip, check_head=True,
+                              lock=lock)
+            text, fields = rv1_fields(ids, lock, r)
+        else:
+            ids = tok.apply_chat_template(msgs_of(p), tools=[CALC_TOOL] if tool else None,
+                                          add_generation_prompt=True, enable_thinking=False,
+                                          tokenize=True)
+            ids = ids if isinstance(ids, list) else ids["input_ids"]
+            gen, calls, own = run_base(model, tok, ids, tool, args.budget)
+            text = tok.decode(gen, skip_special_tokens=False)
+            fields = dict(calls=calls, n_qwen=own, n_chip=0)
+        emit(p, text, fields, time.time() - t0)
+    wall = time.time() - t_all
+    if todo:
+        print(json.dumps({"problems": len(todo), "wall_s": round(wall, 1),
+                          "problems_per_hour": round(len(todo) / wall * 3600, 1),
+                          "batch": args.batch}), flush=True)
     rows = [json.loads(x) for x in out.read_text().splitlines()]
     print(f"{out.name}: {sum(r['exact'] for r in rows)}/{len(rows)} exact")
 
