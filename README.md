@@ -113,7 +113,7 @@ registered, no stopping criteria and no callbacks. The computer's work is visibl
 stream, as a burst of special "trace" tokens. These are the machine's execution log, and Qwen
 then reads the printed answer like ordinary text.
 
-## Usage
+## Quickstart
 
 ```bash
 git clone https://github.com/divagr18/qwenputer && cd qwenputer
