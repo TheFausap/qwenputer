@@ -67,9 +67,10 @@ lookup tables, and every value stays exact in bf16.
 tool-call tags. When a calculation is complete they run it and print the answer as normal text.
 Qwen's state is frozen while the computer runs.
 
-**What it can do.** The computer is about 0.7M nonzero weights covering add, subtract, multiply, exact division,
-signed and decimal numbers, mod, gcd, and whole expressions with brackets. Stock checkpoints give
-every layer the same width, so the merged model is 14 GB vs 9.3 GB for base Qwen. The extra is
+**What it can do.** The computer is about 0.7M nonzero weights covering add, subtract, multiply, exact division
+(reduced fractions when it doesn't terminate), signed numbers, mod, gcd, and whole expressions with
+brackets, powers and decimals. Stock checkpoints give
+every layer the same width, so the merged model is 14.65 GB vs 9.3 GB for base Qwen. The extra is
 almost all zeros, so the download is about the same size.
 
 ### Gated DeltaNet as RAM
