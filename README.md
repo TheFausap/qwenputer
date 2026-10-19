@@ -8,12 +8,13 @@
 
 Qwenputer is Qwen3.5-4B with a working computer compiled directly into its weights. It isn't a
 plugin, a tool or a sandbox. It's a CPU, a big-number maths library and its memory, written as
-transformer layers and appended to the stock model. Nothing was trained: a compiler worked out
-every weight.
+transformer layers and appended to the stock model. None of its weights are learned; every one is computed
+analytically by a compiler.
 
-The trick is memory. Qwen3.5's Gated DeltaNet layers keep a running state that the delta rule
-can overwrite one row at a time, exactly. That state serves as the computer's RAM. Its registers,
-memory and program counter all live inside the model's own attention state.
+We use the model's own Gated DeltaNet state as the computer's RAM. Qwen3.5's Gated DeltaNet
+layers carry a running state that the delta rule can overwrite one row at a time, exactly, so
+each row works as a memory cell. The computer's registers, memory and program counter all live
+there, inside the model's own attention state.
 
 So when Qwenputer writes `48213 × 9917 =`, the answer isn't a guess. The computer in its weights
 runs the multiplication, and the model writes `478128321` itself, digit by digit, exactly. It has
@@ -34,8 +35,8 @@ Python interpreter on the host, which is the ceiling for this kind of help.
 | DeepMind `mul_big` (100) | 66 | **93** (31 / 4, p=4e-6) | 91 |
 | DeepMind clean big add / mul (200) | 69.5 | **99.0** (61 / 2, p=4e-16) | 98.5 |
 
-The computer has never printed a wrong result. About 3.9 million positions of model output
-were replayed through a reference simulator of the circuit, with zero mismatches. Qwen's own
+The computer has never printed a wrong result. We replayed about 3.9 million positions of model
+output through a reference simulator of the circuit and found zero mismatches. Qwen's own
 behaviour is unchanged within noise: on MMLU and ARC the KL divergence of its answer choices
 against base Qwen is about 7e-4, and accuracy moves by less than half a point.
 
@@ -45,7 +46,7 @@ reasoning rather than arithmetic. On the long DeepMind expression chains (`mixed
 has already been given, until it runs out of its token budget, and the next release targets
 this.
 
-These numbers are the best mode per benchmark across the development checkpoints. The
+These numbers are the best mode per benchmark across our development checkpoints. The
 released checkpoint contains all the features behind them, and its own full sweep will replace
 this table.
 
@@ -112,7 +113,7 @@ registered, no stopping criteria and no callbacks. The computer's work is visibl
 stream, as a burst of special "trace" tokens. These are the machine's execution log, and Qwen
 then reads the printed answer like ordinary text.
 
-## Running it
+## Usage
 
 ```bash
 git clone https://github.com/divagr18/qwenputer && cd qwenputer
@@ -155,7 +156,7 @@ The model needs no custom modelling code. [`docs/running.md`](docs/running.md) c
 details:
 - the tools and system prompts that work best
 - the generation settings shipped in `generation_config.json`
-- the optional decoder settings the benchmarks used (`fp` and `tc` in `BatchDecoder`), which make
+- the optional decoder settings our benchmarks used (`fp` and `tc` in `BatchDecoder`), which make
   inline mode stronger
 
 ## Experimental: a RISC-V computer inside Qwen
