@@ -20,7 +20,7 @@ runs the multiplication, and the model writes `478128321` itself, digit by digit
 never printed a wrong answer, from 3-digit sums to 20-digit products, and it still loads like any
 other Qwen checkpoint.
 
-## Results
+## Benchmarks
 
 These are Qwen3.5-4B scores, greedy decoding. Each row compares base Qwen and Qwenputer on the
 same problems, with a paired McNemar test. The Python-tool column is base Qwen calling a real
