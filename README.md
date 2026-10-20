@@ -183,8 +183,8 @@ itself, digit by digit. You can run it with no runtime or tool executor at all.
 | DeepMind `mul_div_multiple_longer` | 77.5 | **100.0** | 97.5 |
 | DeepMind `add_or_sub_big` | 95.0 | **97.5** | 97.5 |
 
-The computer has never printed a wrong result. We replayed about 230,000 of its output positions
-through a reference model of the machine and found zero mismatches. Qwen's text behaviour matches
+We replayed about 230,000 of the computer's output positions through a reference model of the
+machine and found zero mismatches. Qwen's text behaviour matches
 base: KL 6e-4, against a noise floor of 5e-4.
 
 ```bash
