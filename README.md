@@ -77,7 +77,7 @@ token names the row, the `VAL` token after it carries the value, and `STEP` ends
 Nothing here needed a new layer type: the computer's memory is the same Gated DeltaNet
 recurrence Qwen3.5 already uses for language.
 
-## Persistent memory
+## In-weight filesystem (experimental)
 
 The next logical step was to put a filesystem inside the weights. This is experimental and still
 in progress: the model is up as
@@ -101,7 +101,7 @@ are still there.
 
 The model card has the quickstart and the full results.
 
-## Where it started
+## Version 1 (CHIP-8)
 
 [`divagr1925/Qwen3.5-4B-Qwenputer-CHIP8`](https://huggingface.co/divagr1925/Qwen3.5-4B-Qwenputer-CHIP8)
 is the first Qwenputer. It compiles a CHIP-8 machine into Qwen3.5-4B instead: a CPU, a big-number
