@@ -43,7 +43,7 @@ base: KL 6e-4, against a noise floor of 5e-4.
 ## Quickstart
 
 ```bash
-git clone https://github.com/divagr18/qwenputer && cd qwenputer/experimental/riscv && uv sync
+git clone https://github.com/divagr18/qwenputer && cd qwenputer/experimental/riscv && uv sync --extra hf
 hf download divagr1925/Qwen3.5-4B-Qwenputer --local-dir qwenputer-rv
 uv run python -m chipformer.rv.chat qwenputer-rv --firmware tests/data/rv/calc-bridge.elf \
     --ask "Use the calc tool: what is 123456789 * 987654321?"
@@ -76,6 +76,23 @@ Writes arrive through the token stream, so the trace is the computer's execution
 token names the row, the `VAL` token after it carries the value, and `STEP` ends the instruction.
 Nothing here needed a new layer type: the computer's memory is the same Gated DeltaNet
 recurrence Qwen3.5 already uses for language.
+
+## The Filesystem model
+
+[`divagr1925/Qwen3.5-4B-Qwenputer-Filesystem`](https://huggingface.co/divagr1925/Qwen3.5-4B-Qwenputer-Filesystem)
+
+This is the same RISC-V model with a filesystem added to its DeltaNet state. Qwen gets five more
+tools, `put`, `append`, `get`, `list` and `delete`, and the compiled layers answer them the same
+way they answer `calc`. It holds up to 512 files, about 53,000 tokens of text. Save the state at
+the end of a conversation and the files are still there in the next one.
+
+| Benchmark | Base Qwen3.5-4B | **Qwenputer Filesystem** | Python tool (host) |
+|---|---|---|---|
+| Multi-session recall, 90 questions | 7.8 | **83.3** | 78.9 |
+| Facts that changed in a later session, 30 questions | 3.3 | **90.0** | 83.3 |
+
+Its code is on the [`rv-store`](https://github.com/divagr18/qwenputer/tree/rv-store/experimental/riscv)
+branch for now. The model card has the quickstart and the full results.
 
 ## The CHIP-8 model
 
@@ -169,7 +186,7 @@ then reads the printed answer like ordinary text.
 
 ```bash
 git clone https://github.com/divagr18/qwenputer && cd qwenputer
-uv sync
+uv sync --extra hf
 hf download divagr1925/Qwen3.5-4B-Qwenputer-CHIP8 --local-dir qwenputer-4b
 
 uv run python -m chipformer.q35.demo qwenputer-4b                   # Qwen uses its tool-call syntax

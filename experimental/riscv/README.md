@@ -28,5 +28,5 @@ an L4, and in generation it runs at about 3,200 trace tokens a second.
 [`docs/rv32-p3-status.md`](docs/rv32-p3-status.md) has the in-Qwen status.
 
 ```bash
-cd experimental/riscv && uv sync && uv run pytest tests -q
+cd experimental/riscv && uv sync --extra hf && uv run pytest tests -q
 ```
