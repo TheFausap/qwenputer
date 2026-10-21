@@ -77,7 +77,7 @@ token names the row, the `VAL` token after it carries the value, and `STEP` ends
 Nothing here needed a new layer type: the computer's memory is the same Gated DeltaNet
 recurrence Qwen3.5 already uses for language.
 
-## A filesystem in the weights
+## Persistent memory
 
 The next logical step was to put a filesystem inside the weights. This is experimental and still
 in progress: the model is up as
@@ -87,8 +87,9 @@ branch for now.
 
 It's the same RISC-V model with five more tools next to `calc`: `put`, `append`, `get`, `list` and
 `delete`. When Qwen calls one, the compiled layers hash the file name to a slot in a directory kept
-in DeltaNet state, so a lookup takes two or three trace tokens instead of a scan. The file's text
-sits in other DeltaNet heads, eight tokens to a row, and the layers print it back into the
+in DeltaNet state, so a lookup takes two or three trace tokens instead of a scan.
+
+The file's text sits in other DeltaNet heads, eight tokens to a row, and the layers print it back into the
 `<tool_response>` token for token. It holds up to 512 files, about 53,000 tokens of text. Save
 those heads at the end of a conversation, load them at the start of the next one, and the files
 are still there.
@@ -100,7 +101,7 @@ are still there.
 
 The model card has the quickstart and the full results.
 
-## The first version, on CHIP-8
+## Where it started
 
 [`divagr1925/Qwen3.5-4B-Qwenputer-CHIP8`](https://huggingface.co/divagr1925/Qwen3.5-4B-Qwenputer-CHIP8)
 is the first Qwenputer. It compiles a CHIP-8 machine into Qwen3.5-4B instead: a CPU, a big-number
