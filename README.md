@@ -6,17 +6,19 @@
 
 [RISC-V model](https://huggingface.co/divagr1925/Qwen3.5-4B-Qwenputer) · [Filesystem model](https://huggingface.co/divagr1925/Qwen3.5-4B-Qwenputer-Filesystem) · [CHIP-8 model](https://huggingface.co/divagr1925/Qwen3.5-4B-Qwenputer-CHIP8) · [The standalone CHIP-8 transformer it grew from](https://github.com/divagr18/chipformer) · [MIT License](LICENSE)
 
-Qwenputer is Qwen3.5-4B with a 32-bit RISC-V CPU compiled into its weights. The CPU is 11 layers
-in front of Qwen's own. Nothing in them is trained: a compiler sets every weight.
+Qwenputer is Qwen3.5-4B with a 32-bit RISC-V CPU compiled directly into its weights. It isn't a
+plugin, a tool or a sandbox. The CPU is 11 transformer layers in front of Qwen's own, and none of
+their weights are learned: a compiler computes every one.
 
-It uses the model's Gated DeltaNet state as RAM. A DeltaNet layer keeps a running state that the
-delta rule can overwrite one row at a time, exactly, so each row works as a memory cell. The CPU
-keeps its code, data, registers and program counter there.
+It uses the model's own Gated DeltaNet state as RAM. Qwen3.5's DeltaNet layers carry a running
+state that the delta rule can overwrite one row at a time, exactly, so each row works as a memory
+cell. The CPU keeps its code, data, registers and program counter there.
 
-Qwen3.5 already knows a tool-call format: it writes a `<tool_call>` block and reads back a
-`<tool_response>`. Qwenputer reuses that format. The prompt lists a `calc` tool and Qwen calls it
-as usual, but the CPU layers run the call and the model writes the `<tool_response>` itself, digit
-by digit. Nothing outside the model runs anything, so you don't need a tool executor.
+Qwen3.5 was trained to call tools in a fixed format: it writes a `<tool_call>` block and then reads
+a `<tool_response>`. Qwenputer reuses that format for its own computer. The prompt lists a `calc`
+tool and Qwen calls it like any other tool, but nothing outside the model runs it. The computer
+layers read the call and run it on the RISC-V CPU, and the model writes the `<tool_response>`
+itself, digit by digit. You can run it with no runtime or tool executor at all.
 
 The same CPU passes the official riscv-tests suites and runs MicroPython exactly.
 
