@@ -77,24 +77,30 @@ token names the row, the `VAL` token after it carries the value, and `STEP` ends
 Nothing here needed a new layer type: the computer's memory is the same Gated DeltaNet
 recurrence Qwen3.5 already uses for language.
 
-## The Filesystem model
+## A filesystem in the weights
 
-[`divagr1925/Qwen3.5-4B-Qwenputer-Filesystem`](https://huggingface.co/divagr1925/Qwen3.5-4B-Qwenputer-Filesystem)
+The next logical step was to put a filesystem inside the weights. This is experimental and still
+in progress: the model is up as
+[`divagr1925/Qwen3.5-4B-Qwenputer-Filesystem`](https://huggingface.co/divagr1925/Qwen3.5-4B-Qwenputer-Filesystem),
+and its code lives on the [`rv-store`](https://github.com/divagr18/qwenputer/tree/rv-store/experimental/riscv)
+branch for now.
 
-This is the same RISC-V model with a filesystem added to its DeltaNet state. Qwen gets five more
-tools, `put`, `append`, `get`, `list` and `delete`, and the compiled layers answer them the same
-way they answer `calc`. It holds up to 512 files, about 53,000 tokens of text. Save the state at
-the end of a conversation and the files are still there in the next one.
+It's the same RISC-V model with five more tools next to `calc`: `put`, `append`, `get`, `list` and
+`delete`. When Qwen calls one, the compiled layers hash the file name to a slot in a directory kept
+in DeltaNet state, so a lookup takes two or three trace tokens instead of a scan. The file's text
+sits in other DeltaNet heads, eight tokens to a row, and the layers print it back into the
+`<tool_response>` token for token. It holds up to 512 files, about 53,000 tokens of text. Save
+those heads at the end of a conversation, load them at the start of the next one, and the files
+are still there.
 
 | Benchmark | Base Qwen3.5-4B | **Qwenputer Filesystem** | Python tool (host) |
 |---|---|---|---|
 | Multi-session recall, 90 questions | 7.8 | **83.3** | 78.9 |
 | Facts that changed in a later session, 30 questions | 3.3 | **90.0** | 83.3 |
 
-Its code is on the [`rv-store`](https://github.com/divagr18/qwenputer/tree/rv-store/experimental/riscv)
-branch for now. The model card has the quickstart and the full results.
+The model card has the quickstart and the full results.
 
-## The CHIP-8 model
+## The first version, on CHIP-8
 
 [`divagr1925/Qwen3.5-4B-Qwenputer-CHIP8`](https://huggingface.co/divagr1925/Qwen3.5-4B-Qwenputer-CHIP8)
 is the first Qwenputer. It compiles a CHIP-8 machine into Qwen3.5-4B instead: a CPU, a big-number
