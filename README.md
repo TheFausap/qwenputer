@@ -25,16 +25,16 @@ The same CPU passes the official riscv-tests suites and runs MicroPython exactly
 ## Benchmarks
 
 Greedy decoding, 40 problems per set. Each row compares base Qwen3.5-4B and Qwenputer on the same
-problems. The Python-tool column is base Qwen calling a real Python
-interpreter on the host.
+problems. Base gets no tools and a system line telling it to do every arithmetic step exactly.
+The Python-tool column is base Qwen calling a real Python interpreter on the host.
 
 | Benchmark | Base Qwen3.5-4B | **Qwenputer** | Python tool (host) |
 |---|---|---|---|
-| Synthetic integer arithmetic | 70.0 | **97.5** | 97.5 |
-| DeepMind `mul_big` | 65.0 | **97.5** | 100 |
-| DeepMind `div_big` | 80.0 | **97.5** | 95.0 |
-| DeepMind `mul_div_multiple_longer` | 77.5 | **100.0** | 97.5 |
-| DeepMind `add_or_sub_big` | 95.0 | **97.5** | 97.5 |
+| Synthetic integer arithmetic | 75.0 | **97.5** | 97.5 |
+| DeepMind `mul_big` | 55.0 | **97.5** | 100 |
+| DeepMind `div_big` | 72.5 | **97.5** | 95.0 |
+| DeepMind `mul_div_multiple_longer` | 90.0 | **100.0** | 97.5 |
+| DeepMind `add_or_sub_big` | 87.5 | **97.5** | 97.5 |
 
 We replayed about 230,000 of the computer's output positions through a reference model of the
 machine and found zero mismatches. Qwen's text behaviour matches
