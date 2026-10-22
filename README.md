@@ -16,7 +16,7 @@ cell. The CPU keeps its code, data, registers and program counter there.
 The CPU runs C and MicroPython code inside the model's forward passes, and passes the official
 riscv-tests suites.
 
-<p align="center"><img src="docs/benchmarks-rv.png" alt="Qwenputer vs base Qwen3.5-4B and base with a Python tool on NUPA and DeepMind arithmetic sets." width="100%"></p>
+<p align="center"><img src="docs/benchmarks-arith.png" alt="Qwenputer vs base Qwen3.5-4B and base with a Python tool on NUPA and DeepMind arithmetic sets." width="100%"></p>
 
 ## Benchmarks
 
