@@ -2,7 +2,7 @@
   <img src="docs/qwenputer-banner.svg" alt="Qwenputer: a computer, compiled into the weights of a language model." width="100%">
 </p>
 
-> A computer, compiled into the weights of a language model.
+A computer, compiled into the weights of a language model.
 
 [RISC-V model](https://huggingface.co/divagr1925/Qwen3.5-4B-Qwenputer) · [Filesystem model](https://huggingface.co/divagr1925/Qwen3.5-4B-Qwenputer-Filesystem) · [CHIP-8 model](https://huggingface.co/divagr1925/Qwen3.5-4B-Qwenputer-CHIP8) · [The standalone CHIP-8 transformer it grew from](https://github.com/divagr18/chipformer) · [MIT License](LICENSE)
 
@@ -14,13 +14,8 @@ It uses the model's own Gated DeltaNet state as RAM. Qwen3.5's DeltaNet layers c
 state that the delta rule can overwrite one row at a time, exactly, so each row works as a memory
 cell. The CPU keeps its code, data, registers and program counter there.
 
-Qwen3.5 was trained to call tools in a fixed format: it writes a `<tool_call>` block and then reads
-a `<tool_response>`. Qwenputer reuses that format for its own computer. The prompt lists a `calc`
-tool and Qwen calls it like any other tool, but nothing outside the model runs it. The computer
-layers read the call and run it on the RISC-V CPU, and the model writes the `<tool_response>`
-itself, digit by digit. You can run it with no runtime or tool executor at all.
-
-The same CPU passes the official riscv-tests suites and runs MicroPython exactly.
+The CPU runs C code inside the model's forward passes, passes the official riscv-tests suites and
+runs MicroPython exactly.
 
 ## Benchmarks
 
@@ -48,6 +43,12 @@ hf download divagr1925/Qwen3.5-4B-Qwenputer --local-dir qwenputer-rv
 uv run python -m chipformer.rv.chat qwenputer-rv --firmware tests/data/rv/calc-bridge.elf \
     --ask "Use the calc tool: what is 123456789 * 987654321?"
 ```
+
+Qwen3.5 was trained to call tools in a fixed format: it writes a `<tool_call>` block and then reads
+a `<tool_response>`. Qwenputer reuses that format for its own computer. The prompt lists a `calc`
+tool and Qwen calls it like any other tool, but nothing outside the model runs it. The computer
+layers read the call and run it on the RISC-V CPU, and the model writes the `<tool_response>`
+itself, digit by digit. You can run it with no runtime or tool executor at all.
 
 The model loads as a stock `Qwen3_5ForCausalLM`. The `RvChat` driver boots the CPU by loading its
 firmware into the DeltaNet state after the prompt, and keeps the CPU's trace tokens out of Qwen's
