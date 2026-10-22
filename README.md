@@ -2,20 +2,19 @@
   <img src="docs/qwenputer-banner.svg" alt="Qwenputer: a computer, compiled into the weights of a language model." width="100%">
 </p>
 
-A computer, compiled into the weights of a language model.
+[Qwenputer model](https://huggingface.co/divagr1925/Qwen3.5-4B-Qwenputer) · [Filesystem model](https://huggingface.co/divagr1925/Qwen3.5-4B-Qwenputer-Filesystem)
 
-[RISC-V model](https://huggingface.co/divagr1925/Qwen3.5-4B-Qwenputer) · [Filesystem model](https://huggingface.co/divagr1925/Qwen3.5-4B-Qwenputer-Filesystem) · [CHIP-8 model](https://huggingface.co/divagr1925/Qwen3.5-4B-Qwenputer-CHIP8) · [The standalone CHIP-8 transformer it grew from](https://github.com/divagr18/chipformer) · [MIT License](LICENSE)
-
-Qwenputer is Qwen3.5-4B with a 32-bit RISC-V CPU compiled directly into its weights. It isn't a
-plugin, a tool or a sandbox. The CPU is 11 transformer layers in front of Qwen's own, and none of
-their weights are learned: a compiler computes every one.
+**Qwenputer is a new kind of experimental model: Qwen3.5-4B with a 32-bit RISC-V CPU compiled and
+inserted directly into its weights.** It isn't a plugin, a tool or a sandbox. The CPU is 11
+transformer layers in front of Qwen's own, and none of their weights are learned: a compiler
+computes every one.
 
 It uses the model's own Gated DeltaNet state as RAM. Qwen3.5's DeltaNet layers carry a running
 state that the delta rule can overwrite one row at a time, exactly, so each row works as a memory
 cell. The CPU keeps its code, data, registers and program counter there.
 
-The CPU runs C code inside the model's forward passes, passes the official riscv-tests suites and
-runs MicroPython exactly.
+The CPU runs C and MicroPython code inside the model's forward passes, and passes the official
+riscv-tests suites.
 
 ## Benchmarks
 
