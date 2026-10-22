@@ -45,11 +45,11 @@ uv run python -m chipformer.rv.chat qwenputer-rv --firmware tests/data/rv/calc-b
     --ask "Use the calc tool: what is 123456789 * 987654321?"
 ```
 
-Qwen3.5 was trained to call tools in a fixed format: it writes a `<tool_call>` block and then reads
-a `<tool_response>`. Qwenputer reuses that format for its own computer. The prompt lists a `calc`
-tool and Qwen calls it like any other tool, but nothing outside the model runs it. The computer
-layers read the call and run it on the RISC-V CPU, and the model writes the `<tool_response>`
-itself, digit by digit. You can run it with no runtime or tool executor at all.
+Qwen uses the CPU entirely internally; it is not invoked through an external tool call. Instead,
+it piggybacks on the tool-call format Qwen3.5 was trained on: Qwen writes a `<tool_call>` block for
+`calc` exactly as it would for any tool, but nothing outside the model ever runs it. The computer
+layers read the call, run it on the RISC-V CPU, and the model itself writes the `<tool_response>`,
+digit by digit. No runtime, sandbox or tool executor is involved.
 
 The model loads as a stock `Qwen3_5ForCausalLM`. The `RvChat` driver boots the CPU by loading its
 firmware into the DeltaNet state after the prompt, and keeps the CPU's trace tokens out of Qwen's
