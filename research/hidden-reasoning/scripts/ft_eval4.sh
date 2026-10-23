@@ -10,4 +10,4 @@ $P --adapter adapters/$N --lengths 16 64 96 128 144 192 256 512 --n 100 --out re
 $P --adapter adapters/${N}_final --lengths 16 64 96 128 144 192 256 512 --n 100 --out results/ft/${N}_final_answer.jsonl >> logs/evalf_$N.log 2>&1
 for X in $N ${N}_final; do $P --adapter adapters/$X --lengths 64 --n 100 --seed 99 --out results/ft/${X}_val.jsonl >> logs/evalf_$N.log 2>&1; done
 n=$(cat results/ft/${N}_answer.jsonl results/ft/${N}_final_answer.jsonl results/ft/${N}_val.jsonl results/ft/${N}_final_val.jsonl 2>/dev/null | wc -l)
-[ "$n" = 2000 ] && echo done > logs/ft_$N.done || echo "incomplete $n rows" > logs/ft_$N.incomplete
+[ "$n" = 1800 ] && echo done > logs/ft_$N.done || echo "incomplete $n rows" > logs/ft_$N.incomplete
