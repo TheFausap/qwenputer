@@ -1,6 +1,6 @@
 # A RISC-V computer inside Qwen
 
-Model: [divagr1925/Qwen3.5-4B-Qwenputer](https://huggingface.co/divagr1925/Qwen3.5-4B-Qwenputer).
+Model: [divagr1925/Qwen3.5-4B-Qwenputer](https://huggingface.co/divagr1925/Qwen3.5-4B-Qwenputer) on Hugging Face, or [Spartan1925/Qwen3.5-4B-Qwenputer](https://www.modelscope.ai/models/Spartan1925/Qwen3.5-4B-Qwenputer) on ModelScope.
 
 This folder compiles a 32-bit **RV32IM** CPU into stock Qwen3.5 layers, using the same compiler as
 the main project. The CPU also has Zba and a bignum coprocessor. It is a self-contained snapshot:

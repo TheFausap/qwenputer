@@ -2,7 +2,8 @@
   <img src="docs/qwenputer-banner.svg" alt="Qwenputer: a computer, compiled into the weights of a language model." width="100%">
 </p>
 
-[Qwenputer model](https://huggingface.co/divagr1925/Qwen3.5-4B-Qwenputer) · [Filesystem model](https://huggingface.co/divagr1925/Qwen3.5-4B-Qwenputer-Filesystem)
+Qwenputer model: [Hugging Face](https://huggingface.co/divagr1925/Qwen3.5-4B-Qwenputer) · [ModelScope](https://www.modelscope.ai/models/Spartan1925/Qwen3.5-4B-Qwenputer)  
+Filesystem model: [Hugging Face](https://huggingface.co/divagr1925/Qwen3.5-4B-Qwenputer-Filesystem) · [ModelScope](https://www.modelscope.ai/models/Spartan1925/Qwen3.5-4B-Qwenputer-Filesystem)
 
 **Qwenputer is a new kind of experimental model: Qwen3.5-4B with a 32-bit RISC-V CPU compiled and
 inserted directly into its weights.** It isn't a plugin, a tool or a sandbox. The CPU is 11
@@ -83,7 +84,8 @@ recurrence Qwen3.5 already uses for language.
 
 The next logical step was to put a filesystem inside the weights. This is experimental and still
 in progress: the model is up as
-[`divagr1925/Qwen3.5-4B-Qwenputer-Filesystem`](https://huggingface.co/divagr1925/Qwen3.5-4B-Qwenputer-Filesystem),
+[`divagr1925/Qwen3.5-4B-Qwenputer-Filesystem`](https://huggingface.co/divagr1925/Qwen3.5-4B-Qwenputer-Filesystem)
+(also on [ModelScope](https://www.modelscope.ai/models/Spartan1925/Qwen3.5-4B-Qwenputer-Filesystem)),
 and its code lives on the [`rv-store`](https://github.com/divagr18/qwenputer/tree/rv-store/experimental/riscv)
 branch for now.
 
