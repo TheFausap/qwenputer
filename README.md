@@ -43,7 +43,7 @@ base: KL 6e-4, against a noise floor of 5e-4.
 git clone https://github.com/divagr18/qwenputer && cd qwenputer/experimental/riscv && uv sync --extra hf
 hf download divagr1925/Qwen3.5-4B-Qwenputer --local-dir qwenputer-rv
 uv run python -m chipformer.rv.chat qwenputer-rv --firmware tests/data/rv/calc-bridge.elf \
-    --ask "Use the calc tool: what is 123456789 * 987654321?"
+    --ask "Use calc: what is 123456789 * 987654321?"
 ```
 
 Qwen uses the CPU entirely internally; it is not invoked through an external tool call. Instead,

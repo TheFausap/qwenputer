@@ -323,10 +323,10 @@ class RvChat:
     @torch.no_grad()
     def generate(self, ids: list[int], machine: "ref.Machine", max_new: int = 4000,
                  max_chip: int = 60000, check_head: bool = False, verbose: bool = False,
-                 lock: "BR.Session | None" = None) -> dict:
+                 lock: "BR.Session | None" = None, on_token=None) -> dict:
         """Greedy decoding after the prompt ``ids`` with the parked ``machine`` loaded.
         ``lock`` (a Session on a copy of the machine): stop at the first token that differs from
-        the reference's."""
+        the reference's. ``on_token(id)`` is called with every generated model id as it comes."""
         x = torch.tensor([ids], device=self.dev)
         out = self.model(input_ids=x, use_cache=True)
         cache = out.past_key_values  # (fast: Qwen's layers only)
@@ -357,6 +357,8 @@ class RvChat:
         expect, lock_error = [], None
         while n_text < max_new and n_chip_tok < max_chip:
             gen.append(nxt)
+            if on_token is not None:
+                on_token(nxt)
             if lock is not None:  # check against the reference as we go
                 st = nxt - self.v0 if nxt >= self.v0 else BR.text_token(nxt)
                 if expect:
@@ -490,7 +492,7 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("model")
     ap.add_argument("--firmware", default="tests/data/rv/calc-bridge.elf")
-    ap.add_argument("--ask", default="Use the calc tool: what is 123456789 * 987654321?")
+    ap.add_argument("--ask", default="Use calc: what is 123456789 * 987654321?")
     ap.add_argument("--max-new", type=int, default=600)
     ap.add_argument("--check", action="store_true")
     ap.add_argument("--slow", action="store_true", help="every layer through the HF modules")
