@@ -30,3 +30,47 @@ an L4, and in generation it runs at about 3,200 trace tokens a second.
 ```bash
 cd experimental/riscv && uv sync --extra hf && uv run pytest tests -q
 ```
+
+## Host-side assembly writer prototype
+
+`chipformer.rv.asm_agent` lets a local language model write assembly, then assembles it on the
+host and runs a **fresh** RV32 machine per attempt. Faults, timeouts and assembly errors are fed
+back to the writer for up to three attempts. This is orchestration, not an in-model assembler.
+It uses the test assembler's limited syntax, not GNU `as`; the complete contract is in
+`asm_agent.SYSTEM`. There is no stdin or operating system. A zero exit code only means the
+program terminated normally, **not** that it solved the task.
+
+From `experimental/riscv`, with dependencies installed (`uv sync --extra hf`):
+
+```bash
+# First try a program without a language model or GPU:
+cat > /tmp/print-a.s <<'EOF'
+_start:
+    li a0, 65
+    li a7, 1
+    ecall
+    li a0, 0
+    li a7, 93
+    ecall
+EOF
+uv run python -m chipformer.rv.asm_agent --source /tmp/print-a.s
+
+# Ask an instruction-tuned local Qwen checkpoint to write a complete program:
+uv run python -m chipformer.rv.asm_agent --writer-model /path/to/Qwen3.5-4B \
+  --task 'Print the decimal digits 123, followed by a newline.'
+```
+
+By default execution uses the Python **reference machine**, not the model CPU. For actual
+free-running model execution, build a standalone `rv-tiny` checkpoint as described in
+`chipformer.rv.tiny`, then add `--cpu-model /path/to/rv-tiny` to either command. The host loads
+the assembled program into a fresh circuit snapshot and checks every generated chip token against
+a separately run reference trace; a mismatch is reported rather than presented as a result.
+This backend uses the standalone CPU model, not the merged Qwenputer chat checkpoint. Loading
+both writer and CPU models can require substantial memory. The model backend requires the optional
+HF dependencies and has not been optimized for speed.
+
+`--max-tokens` bounds CPU trace tokens, `--max-new` bounds writer output, and `--attempts` bounds
+retries. Results are JSON; output is capped at 512 bytes. Model execution and host assembly are
+experimental, not a security sandbox. For meaningful evaluation, supply separate test cases and
+check the program output against expected results; this prototype retries execution failures but
+has no correctness oracle or automatic test-input facility yet.
