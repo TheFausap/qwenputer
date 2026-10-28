@@ -120,13 +120,63 @@ def attempt_loop(task, generate, run, attempts=3):
     return history
 
 
+def gguf_writer(path, max_new, n_ctx=4096, n_gpu_layers=0):
+    """Load a GGUF writer through llama.cpp; the CPU circuit is not part of this model."""
+    if not Path(path).is_file():
+        raise ValueError(f"GGUF file not found: {path}")
+    try:
+        import llama_cpp
+    except ImportError as e:
+        raise RuntimeError("GGUF support requires llama-cpp-python; see the README") from e
+    if n_gpu_layers != 0 and not llama_cpp.llama_supports_gpu_offload():
+        raise RuntimeError("GPU offload requested, but llama-cpp-python has no GPU backend. "
+                           "Install a CUDA-enabled build or use --gpu-layers 0.")
+    model = llama_cpp.Llama(model_path=str(path), n_ctx=n_ctx, n_gpu_layers=n_gpu_layers,
+                            verbose=False)
+
+    def generate(messages):
+        result = model.create_chat_completion(messages=messages, max_tokens=max_new,
+                                              temperature=0.0)
+        content = result["choices"][0]["message"].get("content")
+        if not isinstance(content, str):
+            raise RuntimeError("GGUF writer returned no text; check the model's chat template")
+        return content
+
+    return generate
+
+
+def hf_writer(path, max_new):
+    import torch
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+
+    tok = AutoTokenizer.from_pretrained(path)
+    model = AutoModelForCausalLM.from_pretrained(path, dtype=torch.bfloat16).eval()
+    model = model.to("cuda" if torch.cuda.is_available() else "cpu")
+
+    def generate(messages):
+        ids = tok.apply_chat_template(messages, add_generation_prompt=True, enable_thinking=False,
+                                      return_tensors="pt").to(model.device)
+        with torch.no_grad():
+            out = model.generate(ids, max_new_tokens=max_new, do_sample=False)
+        return tok.decode(out[0, ids.shape[-1]:], skip_special_tokens=True)
+
+    return generate
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     group = ap.add_mutually_exclusive_group(required=True)
     group.add_argument("--source", help="run assembly from a file (no language model needed)")
     group.add_argument("--task", help="task for a language model to implement")
-    ap.add_argument("--writer-model", help="local HF causal language model or model ID for --task")
+    ap.add_argument("--writer-model", help="HF model ID/directory or local .gguf file for --task")
+    ap.add_argument("--writer-backend", choices=("auto", "hf", "gguf"), default="auto",
+                    help="auto selects GGUF for .gguf files, otherwise Hugging Face")
+    ap.add_argument("--gpu-layers", type=int, default=0,
+                    help="GGUF layers to offload to GPU; 0 = CPU, -1 = all")
+    ap.add_argument("--context-size", type=int, default=4096, help="GGUF context size in tokens")
     ap.add_argument("--cpu-model", help="local rv-tiny checkpoint; otherwise use reference only")
+    ap.add_argument("--cpu-device", choices=("auto", "cpu", "cuda"), default="auto",
+                    help="device for rv-tiny circuit; default uses CUDA if available")
     ap.add_argument("--max-tokens", type=int, default=4096, help="CPU trace token budget")
     ap.add_argument("--max-new", type=int, default=1024, help="writer generation token budget")
     ap.add_argument("--attempts", type=int, default=3)
@@ -135,6 +185,10 @@ def main():
         ap.error("budgets and attempts must be positive")
     if args.task and not args.writer_model:
         ap.error("--task requires --writer-model")
+    if args.gpu_layers < -1 or args.context_size < 1:
+        ap.error("--gpu-layers must be -1 or non-negative and --context-size must be positive")
+    if args.cpu_model and args.cpu_model.lower().endswith(".gguf"):
+        ap.error("--cpu-model requires an unquantized rv-tiny checkpoint, not GGUF")
     circuit = None
     if args.cpu_model:
         import torch
@@ -142,26 +196,29 @@ def main():
         from chipformer.rv import core, firmware
 
         model = Qwen3_5ForCausalLM.from_pretrained(args.cpu_model, dtype=torch.bfloat16).eval()
-        model = model.to("cuda" if torch.cuda.is_available() else "cpu")
+        device = args.cpu_device
+        if device == "auto":
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+        if device == "cuda" and not torch.cuda.is_available():
+            ap.error("--cpu-device cuda requested but PyTorch CUDA is unavailable")
+        model = model.to(device)
         c = core.build()
-        circuit = lambda p, budget: firmware.run(model, c, ref.Machine.from_program(p), budget)
+        circuit = lambda p, budget, cpu_model=model: firmware.run(
+            cpu_model, c, ref.Machine.from_program(p), budget)
     run = lambda source: execute(source, args.max_tokens, circuit)
     if args.source:
         print(json.dumps(run(Path(args.source).read_text(encoding="utf-8")), indent=2))
         return
-    import torch
-    from transformers import AutoModelForCausalLM, AutoTokenizer
-
-    tok = AutoTokenizer.from_pretrained(args.writer_model)
-    model = AutoModelForCausalLM.from_pretrained(args.writer_model, dtype=torch.bfloat16).eval()
-    model = model.to("cuda" if torch.cuda.is_available() else "cpu")
-
-    def generate(messages):
-        ids = tok.apply_chat_template(messages, add_generation_prompt=True, enable_thinking=False,
-                                      return_tensors="pt").to(model.device)
-        with torch.no_grad():
-            out = model.generate(ids, max_new_tokens=args.max_new, do_sample=False)
-        return tok.decode(out[0, ids.shape[-1]:], skip_special_tokens=True)
+    backend = args.writer_backend
+    if backend == "auto":
+        backend = "gguf" if args.writer_model.lower().endswith(".gguf") else "hf"
+    if backend != "gguf" and args.gpu_layers != 0:
+        ap.error("--gpu-layers is only supported by the GGUF writer")
+    try:
+        generate = (gguf_writer(args.writer_model, args.max_new, args.context_size, args.gpu_layers)
+                    if backend == "gguf" else hf_writer(args.writer_model, args.max_new))
+    except (ValueError, RuntimeError) as e:
+        ap.error(str(e))
 
     print(json.dumps(attempt_loop(args.task, generate, run, args.attempts), indent=2))
 
