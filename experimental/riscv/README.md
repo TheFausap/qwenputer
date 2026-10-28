@@ -74,3 +74,44 @@ retries. Results are JSON; output is capped at 512 bytes. Model execution and ho
 experimental, not a security sandbox. For meaningful evaluation, supply separate test cases and
 check the program output against expected results; this prototype retries execution failures but
 has no correctness oracle or automatic test-input facility yet.
+
+### Quantized GGUF writer (lower VRAM)
+
+The **writer** can instead be a local GGUF instruction/chat model, using llama.cpp through
+`llama-cpp-python`. Use a GGUF whose architecture is supported by the installed llama.cpp and
+which contains a suitable chat template (for example a Qwen3.5 instruct GGUF); a base or
+incompatible model may not follow the assembly protocol. Obtain the GGUF separately. The model
+is loaded from its local file; a Hugging Face repository ID is not a GGUF path.
+
+```bash
+# CPU-only llama.cpp build (a C++ compiler and build tools may be needed):
+uv sync --extra gguf
+uv run --extra gguf python -m chipformer.rv.asm_agent \
+  --writer-model /path/to/qwen-instruct-q4.gguf \
+  --task 'Print the decimal digits 123, followed by a newline.'
+```
+
+For an NVIDIA CUDA build, install the CUDA toolkit and an appropriate compiler, then rebuild
+llama-cpp-python with CUDA enabled (this can take time):
+
+```bash
+CMAKE_ARGS="-DGGML_CUDA=on" uv sync --extra gguf \
+  --no-binary-package llama-cpp-python --reinstall-package llama-cpp-python
+uv run --extra gguf python -m chipformer.rv.asm_agent \
+  --writer-model /path/to/qwen-instruct-q4.gguf --gpu-layers 8 \
+  --context-size 4096 --task 'Print the decimal digits 123, followed by a newline.'
+```
+
+`--gpu-layers 0` (the default) keeps the writer on CPU; positive values offload that many layers,
+and `-1` requests all layers. The best value depends on available VRAM; context and model
+architecture also affect memory. Increase `--context-size` if a task plus retry history exceeds
+it, or lower `--attempts`/`--max-new` to reduce memory use. `--writer-backend gguf` forces the
+GGUF backend for files without a `.gguf` suffix. The GGUF model's own template is used; thinking
+mode and output quality can differ from the HF writer, so inspect results.
+
+This only quantizes the language **writer**. With no `--cpu-model`, execution is still the Python
+reference machine. For actual circuit execution, `--cpu-model` still requires the unquantized
+`rv-tiny` HF checkpoint and the `hf` dependencies (use `uv sync` and `uv run` with both `--extra gguf --extra hf`); both models
+must fit in memory. Use `--cpu-device cpu` to keep the circuit on system RAM instead of the GPU. Quantizing the circuit or the merged Qwenputer checkpoint is not supported:
+its exact arithmetic and state behavior need separate validation. These options do not change
+`chipformer.rv.chat` or make the merged Qwenputer checkpoint loadable as GGUF.
